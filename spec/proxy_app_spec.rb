@@ -217,6 +217,77 @@ RSpec.describe RedmineExtendedApi::ProxyApp do
       end
     end
 
+    context 'when the controller only exposes accept_api_auth (standard Redmine getter, no ? variant)' do
+      let(:env) { { 'PATH_INFO' => '/extended_api/settings.json' } }
+      let(:rewritten_env) { { 'PATH_INFO' => '/settings.json' } }
+      let(:request) { double('Request', path: '/settings.json', request_method: 'GET') }
+      let(:route_params) { { controller: 'settings', action: 'edit', format: 'json' } }
+      let(:response) { [200, { 'Content-Type' => 'application/json' }, ['{"settings":{}}']] }
+
+      before do
+        settings_controller = Class.new do
+          class << self
+            def accept_api_auth
+              [:edit]
+            end
+          end
+        end
+
+        stub_const('SettingsController', settings_controller)
+
+        allow(proxy_app).to receive(:rewrite_env).with(env).and_return(rewritten_env)
+        allow(proxy_app).to receive(:build_request).with(rewritten_env).and_return(request)
+        allow(routes).to receive(:recognize_path).with('/settings.json', method: 'GET').and_return(route_params)
+        allow(rails_app).to receive(:call).with(rewritten_env).and_return(response)
+      end
+
+      it 'proxies the request to Rails using the plain accept_api_auth list' do
+        status, headers, body = proxy_app.call(env)
+
+        expect(status).to eq(200)
+        expect(headers).to include('X-Redmine-Extended-API' => 'native')
+        expect(body).to eq(['{"settings":{}}'])
+      end
+    end
+
+    context 'when accept_api_auth? exists but returns false and accept_api_auth list covers the action' do
+      let(:env) { { 'PATH_INFO' => '/extended_api/settings.json' } }
+      let(:rewritten_env) { { 'PATH_INFO' => '/settings.json' } }
+      let(:request) { double('Request', path: '/settings.json', request_method: 'GET') }
+      let(:route_params) { { controller: 'settings', action: 'edit', format: 'json' } }
+      let(:response) { [200, { 'Content-Type' => 'application/json' }, ['{"settings":{}}']] }
+
+      before do
+        settings_controller = Class.new do
+          class << self
+            # accept_api_auth? returns false (e.g. Redmine's default for non-API controllers)
+            def accept_api_auth?(_action)
+              false
+            end
+
+            def accept_api_auth
+              [:edit]
+            end
+          end
+        end
+
+        stub_const('SettingsController', settings_controller)
+
+        allow(proxy_app).to receive(:rewrite_env).with(env).and_return(rewritten_env)
+        allow(proxy_app).to receive(:build_request).with(rewritten_env).and_return(request)
+        allow(routes).to receive(:recognize_path).with('/settings.json', method: 'GET').and_return(route_params)
+        allow(rails_app).to receive(:call).with(rewritten_env).and_return(response)
+      end
+
+      it 'falls through to the accept_api_auth list and proxies the request' do
+        status, headers, body = proxy_app.call(env)
+
+        expect(status).to eq(200)
+        expect(headers).to include('X-Redmine-Extended-API' => 'native')
+        expect(body).to eq(['{"settings":{}}'])
+      end
+    end
+
     context 'when the request uses XML format' do
       let(:env) { { 'PATH_INFO' => '/extended_api/issues.xml' } }
       let(:rewritten_env) { { 'PATH_INFO' => '/issues.xml' } }

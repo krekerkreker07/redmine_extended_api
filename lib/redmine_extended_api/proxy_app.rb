@@ -89,13 +89,29 @@ module RedmineExtendedApi
     def accepts_api_auth?(controller, action)
       return false if action.nil?
 
+      sym = action.to_sym
+
+      # 1. Redmine 5+ defines accept_api_auth?(action) as a class method
       if controller.respond_to?(:accept_api_auth?)
-        controller.accept_api_auth?(action.to_sym)
-      elsif controller.respond_to?(:accept_api_auth_actions)
-        controller.accept_api_auth_actions.include?(action.to_sym)
-      else
-        false
+        result = controller.accept_api_auth?(sym)
+        # Some Redmine versions define accept_api_auth? to accept no args (boolean flag).
+        # If called with an arg it may ignore it and just return true/false for the class.
+        # Fall through to the explicit list checks when it returns false, so that our
+        # patched controllers (which only register specific actions) still work.
+        return result if result
       end
+
+      # 2. Some custom setups expose the list via accept_api_auth_actions
+      if controller.respond_to?(:accept_api_auth_actions)
+        return controller.accept_api_auth_actions.include?(sym)
+      end
+
+      # 3. Standard Redmine getter – accept_api_auth called with no args returns the Array
+      if controller.respond_to?(:accept_api_auth)
+        return Array(controller.accept_api_auth).include?(sym)
+      end
+
+      false
     end
 
     def not_found_response
