@@ -44,33 +44,16 @@ module RedmineExtendedApi
 
     def api_request?(request)
       route_params = recognize_route(request)
-      unless route_params
-        Rails.logger.warn "[ExtendedAPI] 404 – recognize_route returned nil for path=#{request.path.inspect} method=#{request.request_method}"
-        return false
-      end
+      return false unless route_params
 
-      unless api_format?(route_params)
-        Rails.logger.warn "[ExtendedAPI] 404 – not an API format: #{route_params.inspect}"
-        return false
-      end
+      return false unless api_format?(route_params)
 
       controller_name = route_params[:controller] || route_params['controller']
       controller = controller_for_route(controller_name)
-      unless controller
-        Rails.logger.warn "[ExtendedAPI] 404 – controller not found for #{controller_name.inspect}"
-        return false
-      end
+      return false unless controller
 
       action = route_params[:action] || route_params['action']
-      result = accepts_api_auth?(controller, action)
-      unless result
-        Rails.logger.warn "[ExtendedAPI] 404 – accepts_api_auth? false for #{controller}##{action}. " \
-          "respond_to?(:accept_api_auth?)=#{controller.respond_to?(:accept_api_auth?)} " \
-          "respond_to?(:accept_api_auth_actions)=#{controller.respond_to?(:accept_api_auth_actions)} " \
-          "respond_to?(:accept_api_auth)=#{controller.respond_to?(:accept_api_auth)} " \
-          "accept_api_auth=#{controller.respond_to?(:accept_api_auth) ? controller.accept_api_auth.inspect : 'N/A'}"
-      end
-      result
+      accepts_api_auth?(controller, action)
     end
 
     def api_format?(route_params)

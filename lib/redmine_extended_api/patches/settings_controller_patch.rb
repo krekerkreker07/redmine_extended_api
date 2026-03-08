@@ -49,8 +49,13 @@ module RedmineExtendedApi
       }.freeze
 
       def self.prepended(base)
-        base.accept_api_auth :edit
+        base.accept_api_auth :index, :edit
         base.helper_method :extended_api_metadata if base.respond_to?(:helper_method)
+      end
+
+      # Redmine routes GET /settings → settings#index, so we handle both.
+      def index
+        edit
       end
 
       def edit
