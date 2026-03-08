@@ -11,39 +11,30 @@ module RedmineExtendedApi
         'general' => %w[
           app_title
           welcome_text
-          default_language
-          login_required
-          self_registration
-          lost_password
-          autologin
-          rest_api_enabled
-          jsonp_enabled
-          default_projects_public
-          default_projects_modules
-          default_projects_tracker_ids
-          default_issue_start_date_to_creation_date
-          attachment_max_size
-          bulk_download_max_size
-          attachment_extensions_allowed
-          attachment_extensions_denied
-          hosts_allowed
-          hosts_denied
+          per_page_options
+          search_results_per_page
+          activity_days_default
+          host_name
+          protocol
+          text_formatting
+          cache_formatted_text
+          wiki_compression
+          feeds_limit
         ].freeze,
         'display' => %w[
-          per_page_options
-          gantt_items_limit
-          activity_days_default
-          display_subprojects_issues
-          issues_export_limit
-          issue_list_default_columns
-          time_zone
+          ui_theme
+          default_language
+          force_default_language_for_anonymous
+          force_default_language_for_loggedin
+          start_of_week
           date_format
           time_format
+          timespan_format
           user_format
-          thumbnails_enabled
-          thumbnails_size
           gravatar_enabled
           gravatar_default
+          thumbnails_enabled
+          thumbnails_size
           new_item_menu_tab
         ].freeze
       }.freeze
@@ -90,10 +81,14 @@ module RedmineExtendedApi
                               {}
                             end
 
-          # Restrict to whitelisted keys for the requested tab only
-          filtered_params = settings_params.select { |k, _| @settings_keys.include?(k.to_s) }
+          # Restrict to whitelisted keys for the requested tab only, then save
+          # using the same per-setter approach Redmine's own SettingsController uses.
+          settings_params.each do |key, value|
+            next unless @settings_keys.include?(key.to_s)
+            next unless Setting.respond_to?(:"#{key}=")
 
-          Setting.set_all_from_params(filtered_params) unless filtered_params.empty?
+            Setting.send(:"#{key}=", value)
+          end
         end
 
         render_extended_api('settings/show')
