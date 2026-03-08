@@ -250,7 +250,7 @@ RSpec.describe RedmineExtendedApi::ProxyApp do
       end
     end
 
-    context 'when accept_api_auth? exists but returns false and accept_api_auth list covers the action' do
+    context 'when accept_api_auth? raises ArgumentError (Redmine no-arg variant) and accept_api_auth list covers the action' do
       let(:env) { { 'PATH_INFO' => '/extended_api/settings.json' } }
       let(:rewritten_env) { { 'PATH_INFO' => '/settings.json' } }
       let(:request) { double('Request', path: '/settings.json', request_method: 'GET') }
@@ -260,16 +260,21 @@ RSpec.describe RedmineExtendedApi::ProxyApp do
       before do
         settings_controller = Class.new do
           class << self
-            # accept_api_auth? returns false (e.g. Redmine's default for non-API controllers)
-            def accept_api_auth?(_action)
-              false
+            # Redmine defines accept_api_auth? with no args – passing one raises ArgumentError
+            def accept_api_auth?
+              @accept_api_auth.present?
             end
 
-            def accept_api_auth
-              [:edit]
+            def accept_api_auth(*actions)
+              if actions.empty?
+                @accept_api_auth ||= []
+              else
+                @accept_api_auth = actions.flatten
+              end
             end
           end
         end
+        settings_controller.accept_api_auth(:edit)
 
         stub_const('SettingsController', settings_controller)
 
