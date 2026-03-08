@@ -53,9 +53,13 @@ module RedmineExtendedApi
         base.helper_method :extended_api_metadata if base.respond_to?(:helper_method)
       end
 
-      # Redmine routes GET /settings → settings#index, so we handle both.
+      # Redmine routes GET /settings → settings#index for all requests.
+      # Delegate to our edit logic only for extended API requests; otherwise let
+      # the original SettingsController#index render the HTML admin page.
       def index
-        edit
+        return edit if extended_api_request?
+
+        super
       end
 
       def edit
