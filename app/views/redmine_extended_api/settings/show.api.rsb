@@ -1,0 +1,21 @@
+api.extended_api do
+  metadata = extended_api_metadata
+  api.mode metadata[:mode]
+  api.fallback_to_native metadata[:fallback_to_native]
+end
+
+api.settings do
+  api.tab @settings_tab
+
+  (@settings_keys || []).each do |key|
+    next unless Setting.respond_to?(key)
+
+    value = begin
+              Setting.send(key)
+            rescue StandardError
+              nil
+            end
+
+    api.__send__(key.to_sym, value)
+  end
+end

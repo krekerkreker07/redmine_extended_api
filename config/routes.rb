@@ -8,5 +8,11 @@ Rails.application.routes.draw do
     get 'trackers/:id(.:format)', to: 'trackers#show', as: nil
   end
 
+  constraints format: /(json|xml)/ do
+    get   'settings(.:format)', to: 'settings#edit', as: nil
+    put   'settings(.:format)', to: 'settings#edit', as: nil
+    patch 'settings(.:format)', to: 'settings#edit', as: nil
+  end
+
   mount RedmineExtendedApi.proxy_app => RedmineExtendedApi::API_PREFIX
 end

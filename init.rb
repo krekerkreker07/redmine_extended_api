@@ -13,6 +13,7 @@ require_relative 'lib/redmine_extended_api/patches/issues_controller_patch'
 require_relative 'lib/redmine_extended_api/patches/journal_patch'
 require_relative 'lib/redmine_extended_api/patches/notification_suppression_patch'
 require_relative 'lib/redmine_extended_api/patches/roles_controller_patch'
+require_relative 'lib/redmine_extended_api/patches/settings_controller_patch'
 require_relative 'lib/redmine_extended_api/patches/trackers_controller_patch'
 require_relative 'lib/redmine_extended_api/proxy_app'
 
@@ -37,4 +38,5 @@ IssueStatusesController.prepend RedmineExtendedApi::Patches::IssueStatusesContro
 Journal.include RedmineExtendedApi::Patches::NotificationSuppressionPatch
 Journal.include RedmineExtendedApi::Patches::JournalPatch
 RolesController.prepend RedmineExtendedApi::Patches::RolesControllerPatch
+SettingsController.prepend RedmineExtendedApi::Patches::SettingsControllerPatch
 TrackersController.prepend RedmineExtendedApi::Patches::TrackersControllerPatch
