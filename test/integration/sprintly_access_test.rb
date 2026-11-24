@@ -489,6 +489,22 @@ class SprintlyAccessTest < Redmine::ApiTest::Base
     assert_nil Store.read['users']['3']
   end
 
+  # SPR-730: roles imported from the Developer preset before it could link issues get it once.
+  def test_the_developer_preset_is_topped_up_with_issue_relations
+    import!
+    save_role('Tester', DEV)
+    require File.expand_path('../../db/migrate/20261124120000_grant_issue_relations_to_developer_preset', __dir__)
+    migration = GrantIssueRelationsToDeveloperPreset.new
+    migration.verbose = false
+    2.times { migration.up }
+
+    developer = role_named('Developer').reload
+    assert_includes Permissions.app_ids_of(developer), 'issues.manage_relations'
+    assert developer.has_permission?(:manage_issue_relations)
+    assert_equal (DEV + ['issues.manage_relations']).sort, Permissions.app_ids_of(developer).sort
+    refute_includes Permissions.app_ids_of(role_named('Tester')), 'issues.manage_relations', 'custom roles are left alone'
+  end
+
   def test_deleting_a_role_reassigns_its_holders
     import!
     tester = save_role('Tester', DEV)
