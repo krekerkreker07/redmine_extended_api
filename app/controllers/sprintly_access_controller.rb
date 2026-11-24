@@ -42,6 +42,7 @@ class SprintlyAccessController < ApplicationController
   def me
     user = User.current
     Access.bootstrap_admin!(user)
+    Access.pin_default_role!(user)
     data = Store.read
     payload = { initialized: data.present?, user_id: user.id, admin: user.admin?, group_ids: user.group_ids }
     if data

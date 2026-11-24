@@ -437,6 +437,58 @@ class SprintlyAccessTest < Redmine::ApiTest::Base
     assert User.find(4).admin?
   end
 
+  # SPR-4660: the default role is pinned on a newcomer, so the Users screen shows it and a later
+  # change of the default does not move them.
+  def test_a_new_user_is_pinned_on_the_default_role
+    import!
+    post '/users.json', params: { user: { login: 'newbie', firstname: 'New', lastname: 'User',
+                                          mail: 'newbie@example.net', password: 'newbie-pass-123' } }.to_json,
+                        headers: json_headers('jsmith')
+    assert_response :created
+    newbie = User.find_by!(login: 'newbie')
+    viewer = role_named('Viewer')
+    assert_equal [viewer.id], Store.read['users'][newbie.id.to_s]
+
+    put '/sprintly/assignments.json', params: { assignments: { default_role_id: role_named('Developer').id } }.to_json,
+                                      headers: json_headers('jsmith')
+    assert_response :success
+    assert_equal [viewer.id], RedmineExtendedApi::Sprintly::Access.global_role_ids(newbie.reload)
+  end
+
+  def test_signing_in_pins_the_default_role_on_a_user_without_one
+    import!(import_config(users: { '2' => ['admin'] }))
+    viewer = role_named('Viewer')
+    assert_nil Store.read['users']['3']
+
+    assert_equal [viewer.id], me('dlopper')['global']['role_ids']
+    assert_equal [viewer.id], Store.read['users']['3']
+
+    put '/sprintly/assignments.json', params: { assignments: { default_role_id: role_named('Developer').id } }.to_json,
+                                      headers: json_headers('jsmith')
+    assert_response :success
+    assert_equal [viewer.id], me('dlopper')['global']['role_ids'], 'a new default is for the next newcomer'
+    assert_equal [viewer.id], Member.find_by(project_id: 1, user_id: 3).role_ids
+  end
+
+  def test_a_user_whose_group_carries_a_role_is_not_pinned
+    import!(import_config(users: { '2' => ['admin'] }))
+    developer = role_named('Developer')
+    put '/sprintly/assignments.json', params: { assignments: { groups: { '10' => [developer.id] } } }.to_json,
+                                      headers: json_headers('jsmith')
+    assert_response :success
+    post '/groups/10/users.json', params: { user_id: 3 }.to_json, headers: json_headers('jsmith')
+    assert_response :no_content
+
+    assert_equal [developer.id], me('dlopper')['global']['role_ids']
+    assert_nil Store.read['users']['3'], 'the role comes from the group'
+  end
+
+  def test_without_a_default_role_nothing_is_pinned
+    import!(import_config(users: { '2' => ['admin'] }, default_role: nil))
+    assert_empty me('dlopper')['global']['role_ids']
+    assert_nil Store.read['users']['3']
+  end
+
   def test_deleting_a_role_reassigns_its_holders
     import!
     tester = save_role('Tester', DEV)

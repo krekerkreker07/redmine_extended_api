@@ -54,11 +54,16 @@ module RedmineExtendedApi
       def global_role_ids(user, data = Store.read)
         return [] unless data && user.is_a?(User)
 
+        ids = assigned_role_ids(user, data)
+        ids = [data['default_role_id']].compact & role_ids_in_use if ids.empty?
+        ids
+      end
+
+      # The user's own roles ∪ their groups' roles, without the default-role fallback.
+      def assigned_role_ids(user, data)
         own = Array(data['users'][user.id.to_s])
         via_groups = user.groups.to_a.flat_map { |group| Array(data['groups'][group.id.to_s]) }
-        ids = (own + via_groups).uniq
-        ids = [data['default_role_id']].compact if ids.empty?
-        ids & role_ids_in_use
+        (own + via_groups).uniq & role_ids_in_use
       end
 
       def group_role_ids(group, data = Store.read)
@@ -95,6 +100,35 @@ module RedmineExtendedApi
       # global checks, widened by the global role (UserPatch).
       def global_roles_for(user, data = Store.read)
         Role.where(id: global_role_ids(user, data)).to_a
+      end
+
+      # ---- default role -----------------------------------------------------------------
+
+      # SPR-4660: the default role is what a newcomer starts with, not a setting they keep
+      # following. The first time a user with no role of their own and none through a group is
+      # seen — created, or signing in — it is pinned on them, the rule the SPA had before
+      # SPR-383 (`pinFallbackRole`). Without the pin the Users screen showed them with no role,
+      # and changing the default for the next newcomer moved everyone who relied on it.
+      #
+      # Their global role is the same before and after, so admin flags and memberships are left
+      # as they are. Returns whether a pin was written.
+      def pin_default_role!(user)
+        return false unless managed?(user) && default_role_to_pin(user, Store.read)
+
+        Store.update! do |data|
+          role_id = default_role_to_pin(user, data)
+          data['users'][user.id.to_s] = [role_id] if role_id
+          role_id.present?
+        end
+      end
+
+      def default_role_to_pin(user, data)
+        return nil unless data
+
+        role_id = data['default_role_id']
+        return nil unless role_id && role_ids_in_use.include?(role_id)
+
+        assigned_role_ids(user, data).empty? ? role_id : nil
       end
 
       # ---- project role -----------------------------------------------------------------

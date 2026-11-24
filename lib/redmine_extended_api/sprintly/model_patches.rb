@@ -49,6 +49,10 @@ module RedmineExtendedApi
       end
 
       module UserPatch
+        def self.prepended(base)
+          base.after_create_commit :sprintly_pin_default_role
+        end
+
         # Global checks (no project): Redmine accepts a role from any membership. Sprintly adds
         # the global role to those, and for creating projects counts the global role only — in
         # Jira terms it is a global permission, not something a project role can lend you.
@@ -61,6 +65,13 @@ module RedmineExtendedApi
         end
 
         private
+
+        # SPR-4660: a new account starts on the default role, pinned (Access.pin_default_role!).
+        def sprintly_pin_default_role
+          Access.pin_default_role!(self)
+        rescue StandardError => e
+          Rails.logger.error "Sprintly: could not pin the default role on user #{id}: #{e.message}"
+        end
 
         # `authorize_global` passes a controller/action hash; it is global-only when every
         # permission covering that action is.
