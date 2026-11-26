@@ -63,6 +63,14 @@ Rails.application.routes.draw do
     put 'protect(.:format)', action: 'protect'
   end
 
+  # SPR-4669: VCS integrations of a project, read by scv-adapter. Also reachable as /extended_api/sprintly/... .
+  scope 'sprintly/projects/:project_id', controller: 'sprintly_integrations' do
+    get    'integrations(.:format)', action: 'index'
+    post   'integrations(.:format)', action: 'create'
+    put    'integrations/:id(.:format)', action: 'update', constraints: { id: /[A-Za-z0-9-]+/ }
+    delete 'integrations/:id(.:format)', action: 'destroy', constraints: { id: /[A-Za-z0-9-]+/ }
+  end
+
   # SPR-553: the signed-in user's own "App data". Also reachable as /extended_api/sprintly/... .
   scope 'sprintly/me', controller: 'sprintly_app_data' do
     get 'app_data(.:format)', action: 'show'

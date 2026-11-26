@@ -33,6 +33,7 @@ module RedmineExtendedApi
         wiki.view wiki.create wiki.edit wiki.delete wiki.protect
         time.view time.view_others time.log time.edit time.edit_own time.delete
         projects.view projects.create projects.edit projects.manage_members projects.manage_versions
+        projects.manage_integrations
         admin.access admin.settings admin.users admin.groups admin.roles admin.trackers
         admin.statuses admin.priorities admin.custom_fields
         chat.view chat.send chat.edit_own chat.delete_own chat.attach chat.create_channel

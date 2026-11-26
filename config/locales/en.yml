@@ -63,6 +63,7 @@ en:
   permission_sprintly__projects__edit: "Sprintly: projects.edit"
   permission_sprintly__projects__manage_members: "Sprintly: projects.manage_members"
   permission_sprintly__projects__manage_versions: "Sprintly: projects.manage_versions"
+  permission_sprintly__projects__manage_integrations: "Sprintly: projects.manage_integrations"
   permission_sprintly__admin__access: "Sprintly: admin.access"
   permission_sprintly__admin__settings: "Sprintly: admin.settings"
   permission_sprintly__admin__users: "Sprintly: admin.users"
