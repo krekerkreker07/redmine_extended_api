@@ -1,4 +1,4 @@
-# Redmine Extended API
+# Redmine  Extended API
 
 **ATTENTION: ALPHA STAGE**
 
