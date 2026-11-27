@@ -505,6 +505,22 @@ class SprintlyAccessTest < Redmine::ApiTest::Base
     refute_includes Permissions.app_ids_of(role_named('Tester')), 'issues.manage_relations', 'custom roles are left alone'
   end
 
+  # SPR-4686: roles imported before Lock Pages existed get it when they may delete wiki pages.
+  def test_wiki_deleters_are_topped_up_with_lock_pages
+    import!
+    admin = role_named('Administrator')
+    admin.remove_permission!(*Permissions.redmine_permissions_for(['wiki.protect']))
+    save_role('Editor', DEV + ['wiki.delete'])
+    require File.expand_path('../../db/migrate/20261127120000_grant_wiki_protect_to_wiki_deleters', __dir__)
+    migration = GrantWikiProtectToWikiDeleters.new
+    migration.verbose = false
+    2.times { migration.up }
+
+    assert role_named('Administrator').reload.has_permission?(:protect_wiki_pages)
+    assert_equal (DEV + %w[wiki.delete wiki.protect]).sort, Permissions.app_ids_of(role_named('Editor').reload).sort
+    refute_includes Permissions.app_ids_of(role_named('Developer').reload), 'wiki.protect'
+  end
+
   def test_deleting_a_role_reassigns_its_holders
     import!
     tester = save_role('Tester', DEV)
